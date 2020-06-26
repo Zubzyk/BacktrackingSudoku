@@ -10,7 +10,7 @@ import java.util.HashSet;
 
 import javax.swing.JPanel;
 
-public class NumberField extends JPanel {
+public class NumberField {
 	
 	/**
 	 * 
@@ -51,7 +51,7 @@ public class NumberField extends JPanel {
 		this.size = size;
 	}
 	
-	private void doDrawing(Graphics g)
+	void doDrawing(Graphics g)
 	{
 		Graphics2D g2d = (Graphics2D) g;
 		
@@ -65,15 +65,15 @@ public class NumberField extends JPanel {
 			g2d.setColor(Color.black);
 		}
 		
-		g2d.fillRect(frameThickness, 0, (int)(size-2*frameThickness), frameThickness);
-		g2d.fillRect((int)(size-frameThickness), frameThickness, frameThickness, (int)(size-2*frameThickness));
-		g2d.fillRect(frameThickness, (int)(size-frameThickness), (int)(size-2*frameThickness), frameThickness);
-		g2d.fillRect(0, frameThickness, frameThickness, (int)(size-2*frameThickness));
+		g2d.fillRect((int)(posX+frameThickness), (int)posY, (int)(size-2*frameThickness), frameThickness);
+		g2d.fillRect((int)(posX+size-frameThickness), (int)(posY+frameThickness), frameThickness, (int)(size-2*frameThickness));
+		g2d.fillRect((int)(posX+frameThickness), (int)(posY+size-frameThickness), (int)(size-2*frameThickness), frameThickness);
+		g2d.fillRect((int)posX, (int)(posY+frameThickness), frameThickness, (int)(size-2*frameThickness));
 		
-		g2d.fillArc(0, 0, 2*frameThickness, 2*frameThickness, 90, 90);
-		g2d.fillArc((int)(size-2*frameThickness), 0, 2*frameThickness, 2*frameThickness, 0, 90);
-		g2d.fillArc(0, (int)(size-2*frameThickness), 2*frameThickness, 2*frameThickness, 180, 90);
-		g2d.fillArc((int)(size-2*frameThickness), (int)(size-2*frameThickness), 2*frameThickness, 2*frameThickness, 270, 90);
+		g2d.fillArc((int)posX, (int)posY, 2*frameThickness, 2*frameThickness, 90, 90);
+		g2d.fillArc((int)(posX+size-2*frameThickness), (int)posY, 2*frameThickness, 2*frameThickness, 0, 90);
+		g2d.fillArc((int)posX, (int)(posY+size-2*frameThickness), 2*frameThickness, 2*frameThickness, 180, 90);
+		g2d.fillArc((int)(posX+size-2*frameThickness), (int)(posY+size-2*frameThickness), 2*frameThickness, 2*frameThickness, 270, 90);
 		
 		//rysowanie tekstu
 		RenderingHints rh = new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -84,7 +84,7 @@ public class NumberField extends JPanel {
 		g2d.setFont(font);
 		
 		//rysuj glowna liczbe
-		if (fieldValue > 0) {centerString(g2d, new Rectangle(0, 0, (int)size, (int)size), Integer.toString(fieldValue), font);}
+		if (fieldValue > 0) {centerString(g2d, new Rectangle((int)posX, (int)posY, (int)size, (int)size), Integer.toString(fieldValue), font);}
 		else
 		{
 			//rysuj mniejsze liczby
@@ -109,9 +109,9 @@ public class NumberField extends JPanel {
 			s3.setLength(Math.max(s3.length()-1, 0));
 			
 			int tmpPos = (int)(size / 4.0);
-			centerString(g2d, new Rectangle((int)(2*frameThickness), 1 * tmpPos - 10, (int)(size - 4*frameThickness), 20), s1.toString(), font);
-			centerString(g2d, new Rectangle((int)(2*frameThickness), 2 * tmpPos - 10, (int)(size - 4*frameThickness), 20), s2.toString(), font);
-			centerString(g2d, new Rectangle((int)(2*frameThickness), 3 * tmpPos - 10, (int)(size - 4*frameThickness), 20), s3.toString(), font);
+			centerString(g2d, new Rectangle((int)(posX+2*frameThickness), (int)(posY+1 * tmpPos - 10), (int)(size - 4*frameThickness), 20), s1.toString(), font);
+			centerString(g2d, new Rectangle((int)(posX+2*frameThickness), (int)(posY+2 * tmpPos - 10), (int)(size - 4*frameThickness), 20), s2.toString(), font);
+			centerString(g2d, new Rectangle((int)(posX+2*frameThickness), (int)(posY+3 * tmpPos - 10), (int)(size - 4*frameThickness), 20), s3.toString(), font);
 		}
 	}
 	
@@ -128,10 +128,9 @@ public class NumberField extends JPanel {
 	 * @see java.awt.Rectangle
 	 * @see java.lang.String
 	 */
-	public void centerString(Graphics g, Rectangle r, String s, 
-	        Font font) {
-	    FontRenderContext frc = 
-	            new FontRenderContext(null, true, true);
+	public void centerString(Graphics g, Rectangle r, String s, Font font) {
+	    
+		FontRenderContext frc =  new FontRenderContext(null, true, true);
 
 	    Rectangle2D r2D = font.getStringBounds(s, frc);
 	    int rWidth = (int) Math.round(r2D.getWidth());
@@ -144,13 +143,6 @@ public class NumberField extends JPanel {
 
 	    g.setFont(font);
 	    g.drawString(s, r.x + a, r.y + b);
-	}
-	
-	@Override
-	public void paintComponent(Graphics g)
-	{
-		super.paintComponent(g);
-		doDrawing(g);
 	}
 	
 	public void setFiledValue(int fv)
