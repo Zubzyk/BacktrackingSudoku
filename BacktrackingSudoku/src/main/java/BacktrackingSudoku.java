@@ -1,6 +1,8 @@
 import java.awt.EventQueue;
 
 public class BacktrackingSudoku {
+	
+	private static MainWindow instance;
 
 	public static void main(String[] args) {
 		
@@ -20,7 +22,7 @@ public class BacktrackingSudoku {
 		//Okno				
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
-				new MainWindow();
+				instance = new MainWindow();
 			}
 		});
 	}

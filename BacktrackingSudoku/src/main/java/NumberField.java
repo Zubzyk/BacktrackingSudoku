@@ -12,17 +12,16 @@ import javax.swing.JPanel;
 
 public class NumberField {
 	
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+	static final long serialVersionUID = 1L;
 	
 	private double posX, posY, size;
 	private boolean drawColor;
 	private boolean isSearched;
+	private boolean isHighlighted;
+	private boolean isMarked;
 	private static int frameThickness = 3;
-	int fieldValue = 0;
-	HashSet<Integer> notedNumbers = new HashSet<Integer>(); 
+	private int fieldValue = 0;
+	private HashSet<Integer> notedNumbers = new HashSet<Integer>(); 
 
 	NumberField()
 	{
@@ -55,6 +54,13 @@ public class NumberField {
 	{
 		Graphics2D g2d = (Graphics2D) g;
 		
+		//rysuj t³o
+		if (isHighlighted)
+		{
+			g2d.setColor(Color.YELLOW);
+			g2d.fillRect((int)(posX+frameThickness), (int)(posY+frameThickness), (int)(size-2*frameThickness), (int)(size-2*frameThickness));
+		}
+		
 		//rysuj obramowanie
 		if (drawColor)
 		{
@@ -62,7 +68,7 @@ public class NumberField {
 		}
 		else
 		{
-			g2d.setColor(Color.black);
+			if (isMarked) g2d.setColor(Color.BLUE); else g2d.setColor(Color.black);
 		}
 		
 		g2d.fillRect((int)(posX+frameThickness), (int)posY, (int)(size-2*frameThickness), frameThickness);
@@ -76,6 +82,7 @@ public class NumberField {
 		g2d.fillArc((int)(posX+size-2*frameThickness), (int)(posY+size-2*frameThickness), 2*frameThickness, 2*frameThickness, 270, 90);
 		
 		//rysowanie tekstu
+		g2d.setColor(Color.BLACK);
 		RenderingHints rh = new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 		rh.put(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
 		g2d.setRenderingHints(rh);
@@ -145,8 +152,51 @@ public class NumberField {
 	    g.drawString(s, r.x + a, r.y + b);
 	}
 	
-	public void setFiledValue(int fv)
+	public void setFieldValue(int fv)
 	{
 		fieldValue = fv;
+	}
+	
+	public void updateNotedNumbers(int value)
+	{
+		if ((value >= 1) & (value <= 9))
+		{
+			if (!notedNumbers.add(value)) notedNumbers.remove(value);
+		}
+	}
+
+	public void fieldValueInc() {
+		fieldValue++;
+		if (fieldValue > 9) fieldValue = 0;
+	}
+
+	public boolean checkClick(double posX, double posY) {
+		
+		return (((posX >= this.posX)&(posX <= this.posX + this.size))&((posY >= this.posY)&(posY <= this.posY + this.size)));
+	}
+	
+	public void setHighlight(boolean b)
+	{
+		this.isHighlighted = b;
+	}
+	
+	public void setMarked(boolean b)
+	{
+		this.isMarked = b;
+	}
+	
+	public void setSearched(boolean b)
+	{
+		this.isSearched = b;
+	}
+	
+	public void setDrawColor(boolean b)
+	{
+		this.drawColor = b;
+	}
+
+	public void clearNoted() 
+	{
+		this.notedNumbers.clear();
 	}
 }
