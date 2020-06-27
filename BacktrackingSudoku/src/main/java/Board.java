@@ -2,14 +2,18 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.util.Vector;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.Timer;
 
 public class Board extends JPanel implements MouseListener, MouseMotionListener, KeyListener {
 	
@@ -33,6 +37,13 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 	INPUT_MODE inputMode;
 	
 	JFrame parentWindow;
+	
+	private int[][] solvingArray = new int[9][9];
+	
+	private int step_i, step_j;
+	
+	Timer solveClock;
+	ActionListener taskPerformer;
 	
 	Board(JFrame parent, float s, int[][] initialState) throws Exception {
 		super();
@@ -77,6 +88,14 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 		this.addMouseListener(this);
 		this.addMouseMotionListener(this);
 		this.addKeyListener(this);
+		
+		int delay = 100; //milliseconds
+		taskPerformer = new ActionListener() {
+			public void actionPerformed(ActionEvent evt) {
+		        stepSolve();
+		    }
+		};
+		solveClock = new Timer(delay, taskPerformer);
 	}
 	
 	@Override
@@ -354,4 +373,226 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 	public Board.INPUT_MODE getMode() {
 		return this.inputMode;
 	}
+	
+	public void solveUsingBacktracking()
+	{
+		//przygotowac wstepnie macierz do rozwiazywania		
+		for (int i = 0; i < solvingArray.length; i++)
+		{
+			for (int j = 0; j < solvingArray[0].length; j++)
+			{
+				solvingArray[i][j] = gridElements[i][j].getValue();;
+			}
+		}
+		
+		//rozwiazywanie sudoku (backtracking rekursywnie) jezeli true znaleziono rozwiaznie
+		if (solveRecursive(0, 0))
+		{
+			//przepisanie rozwiazania
+			for (int i = 0; i < solvingArray.length; i++)
+			{
+				for (int j = 0; j < solvingArray[0].length; j++)
+				{
+					 gridElements[i][j].setFieldValue(solvingArray[i][j]);
+				}
+			}
+		} else
+		{
+			//nie znaleziono rozwiazania
+			System.out.println("nie znaleziono rozwiazania");
+		}
+	}
+
+	private boolean solveRecursive(int i, int j)
+	{
+		//jezeli dotarlismy do konca zwroc true
+		if ((i >= solvingArray.length) || (j >= solvingArray[0].length)) return true;
+		
+		//jezeli natrafi na podana liczbe w problemie to przejdz dalej
+		if (isHardState(i,j)) 
+		{
+			if (j == 8) 
+			{
+				return solveRecursive(i+1, 0);
+			} else {
+				return solveRecursive(i, j+1);
+			}
+		} else
+		{
+			//jezeli brak jakiejkolwiek liczby przejdz do 1
+			if (solvingArray[i][j] == 0) solvingArray[i][j] = 1;
+			
+			//sprawdzaj liczby rosn¹co
+			while (solvingArray[i][j] <= 9)
+			{
+				//jezeli dana liczba moze zajmowac sprawdzana pozycje przechodzimy dalej
+				if (checkRules(i, j))
+				{
+					if (j == 8) 
+					{
+						if (solveRecursive(i+1, 0)) return true;
+					} else {
+						if (solveRecursive(i, j+1)) return true;
+					}
+				}
+					
+				solvingArray[i][j]++;
+			}
+		}
+		
+		//skoro nie znaleziono zwracamy false i backtrackujemy
+		solvingArray[i][j] = 0;
+		return false;
+	}
+	
+	private boolean checkRules(int i, int j)
+	{
+		//sprawdz w wierszu (liczba nie moze sie powtrzac w wierszu)
+		for (int a = 0; a < solvingArray.length; a++)
+		{
+			if ((a != i) && (solvingArray[a][j] == solvingArray[i][j])) return false;
+		}
+		
+		//sprawdz w kolumnie (liczba nie moze sie powtarzac w kolumnie)
+		for (int a = 0; a < solvingArray.length; a++)
+		{
+			if ((a != j) && (solvingArray[i][a] == solvingArray[i][j])) return false;
+		}
+		
+		//sprawdz w polu 3x3 (liczba nie moze sie powtarzac)
+		int subFieldX = i / 3;
+		int subFieldY = j / 3;
+		
+		for (int a = 0; a < 3; a++)
+		{
+			for (int b = 0; b < 3; b++)
+			{
+				int subX = subFieldX * 3 + a;
+				int subY = subFieldY * 3 + b;
+				if ((subX != i) && (subY != j) && solvingArray[subX][subY] == solvingArray[i][j]) return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	public void solveStepByStep()
+	{
+		//przygotowanie (zablokwoanie kontrolek, przygotowanie macierzy etc)
+		//przygotowanie zmiennych kotrolnych
+		this.step_i = 0;
+		this.step_j = 0;
+		
+		//przygotowac wstepnie macierz do rozwiazywania		
+		for (int i = 0; i < solvingArray.length; i++)
+		{
+			for (int j = 0; j < solvingArray[0].length; j++)
+			{
+				solvingArray[i][j] = gridElements[i][j].getValue();;
+			}
+		}
+		
+		if (isHardState(step_i, step_j)) stepForward();
+		
+		//przygotowanie kontrolek predkosci odtwarzania
+		
+		//przyczepienie do timera funkcji rozwiazujacej krok po kroku
+		
+		solveClock.restart();
+	}
+	
+	private void stepSolve()
+	{
+		unSetMarked();
+		setMarked(gridElements[step_i][step_j]);
+		this.marked.setFieldValue(solvingArray[step_i][step_j]);
+		this.repaint();
+		
+		if ((step_i == 1) & (step_j == 0))
+		{
+			System.out.println();
+		}
+		solvingArray[step_i][step_j]++;
+		
+		if (solvingArray[step_i][step_j] == 10) 
+		{
+			solvingArray[step_i][step_j] = 0;
+			this.marked.setFieldValue(solvingArray[step_i][step_j]);
+			this.repaint();
+			
+			if (stepBackward()) return;
+		} else {
+		
+			if (checkRules(step_i, step_j))
+			{
+				if (stepForward()) return;
+			}
+		}
+		//jezeli natrafi na podana liczbe w problemie to przejdz dalej
+		//TODO: ostatecza wersja
+
+		
+	}
+	
+	private boolean isHardState(int i, int j)
+	{
+		return (solvingArray[i][j] == hardState[i][j]) & (solvingArray[i][j] != 0);
+	}
+	
+	private boolean stepForward()
+	{
+		unSetMarked();
+		setMarked(gridElements[step_i][step_j]);
+		this.marked.setFieldValue(solvingArray[step_i][step_j]);
+		this.repaint();
+		
+		step_j++;
+		
+		if (step_j > 8)
+		{
+			step_i++;
+			step_j = 0;
+		}
+		
+		if (step_i > 8) 
+		{
+			stopSolving("Success");
+			return true;
+		}
+		
+		if (isHardState(step_i,step_j)) stepForward();
+		
+		return false;
+	}
+	
+	private boolean stepBackward()
+	{
+		step_j--;
+		if (step_j < 0)
+		{
+			step_i--;
+			step_j = 8;
+		}
+		
+		if (step_i < 0) 
+		{
+			stopSolving("Failed");
+			return true;
+		}
+		
+		if (isHardState(step_i,step_j)) stepBackward();
+		
+		return false;
+	}
+	
+	private void stopSolving(String msg)
+	{
+		System.out.println(msg);
+		solveClock.stop();
+	}
+
+	public void setTimerDelay(int i) {
+		solveClock.setDelay(i);
+	}
 }
+

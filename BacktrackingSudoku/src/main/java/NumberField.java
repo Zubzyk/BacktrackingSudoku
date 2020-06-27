@@ -199,4 +199,8 @@ public class NumberField {
 	{
 		this.notedNumbers.clear();
 	}
+
+	public int getValue() {
+		return fieldValue;
+	}
 }
