@@ -1,6 +1,7 @@
 import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
@@ -22,7 +23,7 @@ public class MainWindow extends JFrame implements ActionListener, KeyListener, I
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	private static final String newGameButtonText = "Nowa gra";
+	//private static final String newGameButtonText = "Nowa gra";
 	private static final String clearButtonText = "Restart";
 	private static final String modeButtonText_mode1 = "Tryb: Du¿e cyfry";
 	private static final String modeButtonText_mode2 = "Tryb: Ma³e cyfry";
@@ -43,13 +44,16 @@ public class MainWindow extends JFrame implements ActionListener, KeyListener, I
 	
 	private Board gameBoard;
 	private JPanel controlPanel;
-	private JButton newGameButton;
+	//private JButton newGameButton;
 	private JButton clearButton;
 	private JButton modeButton;
 	private JButton solveButton;
 	private JButton solveStepButton;
 	private JToggleButton fastForward;
-	private JPanel playbackControl;
+	private JPanel infoPanel;
+	private JLabel infoLabel;
+	
+	private boolean isStepSolving = false;
 
 	public MainWindow() {
 		super(windowName);
@@ -75,31 +79,33 @@ public class MainWindow extends JFrame implements ActionListener, KeyListener, I
         }
         
         controlPanel = new JPanel(new GridLayout(2, 3));
-        newGameButton = new JButton(newGameButtonText);
+        //newGameButton = new JButton(newGameButtonText);
         clearButton = new JButton(clearButtonText);
         solveButton = new JButton(solveButtonText);
         solveStepButton = new JButton(solveStepButtonText);
         fastForward = new JToggleButton(fastFowardButtonText);
+        infoLabel = new JLabel("test", JLabel.CENTER);
         
         String text = gameBoard.getMode() == Board.INPUT_MODE.BIG_NUMBERS ? modeButtonText_mode1 : modeButtonText_mode2;
        
         modeButton = new JButton(text);
-        playbackControl = new JPanel(new GridLayout(2, 3));
+        infoPanel = new JPanel(new FlowLayout());
         
         contentPane.add(gameBoard);
-        controlPanel.add(newGameButton);
+        //controlPanel.add(newGameButton);
         controlPanel.add(clearButton);
         controlPanel.add(modeButton);
         controlPanel.add(solveButton);
         controlPanel.add(solveStepButton);
         controlPanel.add(fastForward);
         contentPane.add(controlPanel);
-        contentPane.add(playbackControl);
+        infoPanel.add(infoLabel);
+        contentPane.add(infoPanel);
         
         layout.putConstraint(SpringLayout.WEST, contentPane, -10, SpringLayout.WEST, gameBoard);
         layout.putConstraint(SpringLayout.NORTH, contentPane, -10, SpringLayout.NORTH, gameBoard);
         layout.putConstraint(SpringLayout.EAST, contentPane, 10, SpringLayout.EAST, gameBoard);
-        layout.putConstraint(SpringLayout.SOUTH, contentPane, 10, SpringLayout.SOUTH, playbackControl);
+        layout.putConstraint(SpringLayout.SOUTH, contentPane, 10, SpringLayout.SOUTH, infoPanel);
         
         layout.putConstraint(SpringLayout.WEST, gameBoard, 10, SpringLayout.WEST, contentPane);
         layout.putConstraint(SpringLayout.NORTH, gameBoard, 10, SpringLayout.NORTH, contentPane);
@@ -109,15 +115,16 @@ public class MainWindow extends JFrame implements ActionListener, KeyListener, I
         layout.putConstraint(SpringLayout.EAST, controlPanel, -10, SpringLayout.EAST, contentPane);
         layout.putConstraint(SpringLayout.WEST, controlPanel, 10, SpringLayout.WEST, contentPane);
         
-        layout.putConstraint(SpringLayout.NORTH, playbackControl, 10, SpringLayout.SOUTH, controlPanel);
-        layout.putConstraint(SpringLayout.EAST, playbackControl, -10, SpringLayout.EAST, contentPane);
-        layout.putConstraint(SpringLayout.WEST, playbackControl, 10, SpringLayout.WEST, contentPane);
-        playbackControl.setVisible(false);        
+        layout.putConstraint(SpringLayout.NORTH, infoPanel, 10, SpringLayout.SOUTH, controlPanel);
+        layout.putConstraint(SpringLayout.EAST, infoPanel, -10, SpringLayout.EAST, contentPane);
+        layout.putConstraint(SpringLayout.WEST, infoPanel, 10, SpringLayout.WEST, contentPane);
         
 		this.pack();
+		fastForward.setVisible(false);
+		infoLabel.setVisible(false);
 	    this.setVisible(true);   
 	    
-	    newGameButton.addActionListener(this);
+	    //newGameButton.addActionListener(this);
 	    clearButton.addActionListener(this);
 	    modeButton.addActionListener(this);
 	    solveButton.addActionListener(this);
@@ -127,34 +134,54 @@ public class MainWindow extends JFrame implements ActionListener, KeyListener, I
 	}
 
 	public void actionPerformed(ActionEvent e) {
-		if (e.getSource() == newGameButton);
-		if (e.getSource() == clearButton) gameBoard.clearBoard();
-		if (e.getSource() == modeButton) toggleMode();
-		if (e.getSource() == solveButton) gameBoard.solveUsingBacktracking();
-		if (e.getSource() == solveStepButton) gameBoard.solveStepByStep();
-		
+		if (isStepSolving)
+		{
+			if (e.getSource() == solveStepButton) stopStepSolving();
+		} else {
+			//if (e.getSource() == newGameButton);
+			if (e.getSource() == clearButton) gameBoard.clearBoard();
+			if (e.getSource() == modeButton) toggleMode();
+			if (e.getSource() == solveButton) gameBoard.solveUsingBacktracking();
+			if (e.getSource() == solveStepButton) startStepSolving();
+			
+			setInfoText("", Color.WHITE);
+		}
+
 		gameBoard.repaint();
 	}
 
 	private void toggleMode()
 	{
-		this.gameBoard.toggleMode();
-		String text = gameBoard.getMode() == Board.INPUT_MODE.BIG_NUMBERS ? modeButtonText_mode1 : modeButtonText_mode2;
-		this.modeButton.setText(text);
-	}
-
-	public void keyTyped(KeyEvent e) {
-		// TODO Auto-generated method stub
-		
+		if (!isStepSolving)
+		{
+			this.gameBoard.toggleMode();
+			String text = gameBoard.getMode() == Board.INPUT_MODE.BIG_NUMBERS ? modeButtonText_mode1 : modeButtonText_mode2;
+			this.modeButton.setText(text);
+		}
 	}
 
 	public void keyPressed(KeyEvent e) {
-		if (e.getKeyCode() == KeyEvent.VK_SPACE) toggleMode(); //TODO: pausing in playback
+		if (!isStepSolving)
+		{
+			if (e.getKeyCode() == KeyEvent.VK_SPACE) stopStepSolving(); 
+		} else {
+			if (e.getKeyCode() == KeyEvent.VK_SPACE) toggleMode(); 
+		}
 	}
 
-	public void keyReleased(KeyEvent e) {
-		// TODO Auto-generated method stub
-		
+	private void startStepSolving() {
+		gameBoard.solveStepByStep();
+		gameBoard.lockControl();
+		fastForward.setVisible(true);
+		infoLabel.setText("");
+		isStepSolving = true;
+	}
+	
+	private void stopStepSolving() {
+		gameBoard.stopSolveStepByStep();
+		gameBoard.unlockControl();
+		fastForward.setVisible(false);
+		isStepSolving = false;
 	}
 
 	public void itemStateChanged(ItemEvent e) {
@@ -167,26 +194,14 @@ public class MainWindow extends JFrame implements ActionListener, KeyListener, I
 		
 	}
 	
+	public void setInfoText(String msg, Color c)
+	{
+		infoLabel.setVisible(true);
+		infoLabel.setText(msg);
+		infoLabel.setForeground(c);
+	}
 	
-	
-//	@Override
-//	public void paintComponents(Graphics g) {
-//		super.paintComponents(g);
-//		
-//		Graphics2D g2d = (Graphics2D) g;
-//		Dimension windowSize = this.getSize();
-//		int frameSize = 20;
-//		int lineThickness = 10;
-//		
-//		int linePosWidth = (int)(windowSize.width / 3);
-//		int linePosHeight = (int)(windowSize.height / 3);
-//		
-//		g2d.setColor(Color.black);
-//		//g2d.fillRect((int)(linePosWidth - lineThickness / 2), frameSize, 2 * lineThickness, windowSize.height - 2 * frameSize);
-//		g2d.fillRect(0, 0, 200, 200);
-//		//g2d.fillRect(frameThickness, 0, (int)(size-2*frameThickness), frameThickness);
-//		//g2d.fillRect(frameThickness, 0, (int)(size-2*frameThickness), frameThickness);
-//		
-//	}
-
+	//nieuzywane event listnery
+	public void keyTyped(KeyEvent e) {}
+	public void keyReleased(KeyEvent e) {}
 }

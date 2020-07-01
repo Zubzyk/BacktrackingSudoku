@@ -36,16 +36,19 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 	
 	INPUT_MODE inputMode;
 	
-	JFrame parentWindow;
+	MainWindow parentWindow;
 	
 	private int[][] solvingArray = new int[9][9];
+	private int[][] solvingHardState = new int[9][9];
 	
 	private int step_i, step_j;
 	
 	Timer solveClock;
 	ActionListener taskPerformer;
 	
-	Board(JFrame parent, float s, int[][] initialState) throws Exception {
+	private boolean isLocked = false;
+	
+	Board(MainWindow parent, float s, int[][] initialState) throws Exception {
 		super();
 		
 		this.parentWindow = parent;
@@ -241,75 +244,50 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 		}
 	}
 
-	public void mouseClicked(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void mousePressed(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
 	public void mouseReleased(MouseEvent e) {
 		
-		//TODO: locking userinput during automatic mode
-		
-		this.requestFocusInWindow();
-		
-		if (e.getButton() == MouseEvent.BUTTON1)
+		if (!isLocked)
 		{
-			unSetMarked();
+			this.requestFocusInWindow();
 			
-			NumberField tmp = findFieldUnderPosition(e.getX(), e.getY());
+			if (e.getButton() == MouseEvent.BUTTON1)
+			{
+				unSetMarked();
+				
+				NumberField tmp = findFieldUnderPosition(e.getX(), e.getY());
+				
+				setMarked(tmp);
+			}
 			
-			setMarked(tmp);
+			if (e.getButton() == MouseEvent.BUTTON2);//TODO: changing entermode
+			
+			if (e.getButton() == MouseEvent.BUTTON3) unSetMarked();
 		}
-		
-		if (e.getButton() == MouseEvent.BUTTON2);//TODO: changing entermode
-		
-		if (e.getButton() == MouseEvent.BUTTON3) unSetMarked();
 		
 		this.repaint();
 	}
 
-	public void mouseEntered(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void mouseExited(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
-	public void keyTyped(KeyEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
-
 	public void keyPressed(KeyEvent e) {
 		
-		//TODO: locking userinput during automatic mode
-		
-		int keyCode = e.getKeyCode();
-		
-		if ((keyCode >= KeyEvent.VK_0) & (keyCode <= KeyEvent.VK_9))
+		if (!isLocked)
 		{
-			enterNumber(keyCode - KeyEvent.VK_0); 
+			int keyCode = e.getKeyCode();
+			
+			if ((keyCode >= KeyEvent.VK_0) & (keyCode <= KeyEvent.VK_9))
+			{
+				enterNumber(keyCode - KeyEvent.VK_0); 
+			}
+			
+			if ((keyCode >= KeyEvent.VK_NUMPAD0) & (keyCode <= KeyEvent.VK_NUMPAD9))
+			{
+				enterNumber(keyCode - KeyEvent.VK_NUMPAD0); 
+			}
+			
+			if ((keyCode == KeyEvent.VK_BACK_SPACE) & (marked != null)) marked.setFieldValue(0);
+			if ((keyCode == KeyEvent.VK_DELETE) & (marked != null)) marked.setFieldValue(0);
+			if (keyCode == KeyEvent.VK_ESCAPE) unSetMarked();
+			if (keyCode == KeyEvent.VK_SPACE) parentWindow.dispatchEvent(e);
 		}
-		
-		if ((keyCode >= KeyEvent.VK_NUMPAD0) & (keyCode <= KeyEvent.VK_NUMPAD9))
-		{
-			enterNumber(keyCode - KeyEvent.VK_NUMPAD0); 
-		}
-		
-		if ((keyCode == KeyEvent.VK_BACK_SPACE) & (marked != null)) marked.setFieldValue(0);
-		if ((keyCode == KeyEvent.VK_DELETE) & (marked != null)) marked.setFieldValue(0);
-		if (keyCode == KeyEvent.VK_ESCAPE) unSetMarked();
-		if (keyCode == KeyEvent.VK_SPACE) parentWindow.dispatchEvent(e); //TODO: pausing in playback
-		
-		//this.getParent().dispatchEvent(e);
 		
 		this.repaint();
 	}
@@ -343,27 +321,20 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 		}
 	}
 
-	public void keyReleased(KeyEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
 
-	public void mouseDragged(MouseEvent e) {
-		// TODO Auto-generated method stub
-		
-	}
 
 	public void mouseMoved(MouseEvent e) {
 		
-		//TODO: locking userinput during automatic mode
-		
-		clearHighlight();
-		
-		NumberField tmp = findFieldUnderPosition(e.getX(), e.getY());
-		
-		if (tmp != null) setLineColumnHighlight(tmp);
-		
-		this.repaint();
+		if (!isLocked)
+		{
+			clearHighlight();
+			
+			NumberField tmp = findFieldUnderPosition(e.getX(), e.getY());
+			
+			if (tmp != null) setLineColumnHighlight(tmp);
+			
+			this.repaint();
+		}
 	}
 
 	public void toggleMode() {
@@ -374,32 +345,46 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 		return this.inputMode;
 	}
 	
-	public void solveUsingBacktracking()
+	private void prepareForSolving()
 	{
-		//przygotowac wstepnie macierz do rozwiazywania		
+		//skopiuj aktualny stan planszy do zmiennych roboczych
 		for (int i = 0; i < solvingArray.length; i++)
 		{
 			for (int j = 0; j < solvingArray[0].length; j++)
 			{
-				solvingArray[i][j] = gridElements[i][j].getValue();;
+				solvingArray[i][j] = gridElements[i][j].getValue();
+				solvingHardState[i][j] = gridElements[i][j].getValue();
 			}
 		}
+	}
+	
+	private void copySolution()
+	{
+		for (int i = 0; i < solvingArray.length; i++)
+		{
+			for (int j = 0; j < solvingArray[0].length; j++)
+			{
+				 gridElements[i][j].setFieldValue(solvingArray[i][j]);
+			}
+		}
+	}
+	
+	
+	public void solveUsingBacktracking()
+	{
+		//przygotowac wstepnie macierz do rozwiazywania		
+		prepareForSolving();
 		
 		//rozwiazywanie sudoku (backtracking rekursywnie) jezeli true znaleziono rozwiaznie
 		if (solveRecursive(0, 0))
 		{
 			//przepisanie rozwiazania
-			for (int i = 0; i < solvingArray.length; i++)
-			{
-				for (int j = 0; j < solvingArray[0].length; j++)
-				{
-					 gridElements[i][j].setFieldValue(solvingArray[i][j]);
-				}
-			}
+			copySolution();
+			reportSuccess();
 		} else
 		{
 			//nie znaleziono rozwiazania
-			System.out.println("nie znaleziono rozwiazania");
+			reportFailure();
 		}
 	}
 
@@ -478,73 +463,69 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 	
 	public void solveStepByStep()
 	{
-		//przygotowanie (zablokwoanie kontrolek, przygotowanie macierzy etc)
 		//przygotowanie zmiennych kotrolnych
 		this.step_i = 0;
 		this.step_j = 0;
 		
 		//przygotowac wstepnie macierz do rozwiazywania		
-		for (int i = 0; i < solvingArray.length; i++)
-		{
-			for (int j = 0; j < solvingArray[0].length; j++)
-			{
-				solvingArray[i][j] = gridElements[i][j].getValue();;
-			}
-		}
+		prepareForSolving();
 		
+		//przejdz do pierszego nie rozwiazanego pola
 		if (isHardState(step_i, step_j)) stepForward();
 		
-		//przygotowanie kontrolek predkosci odtwarzania
+		//jezeli nie ma co rozwiazywac
+		if (step_i > 8) return;
 		
-		//przyczepienie do timera funkcji rozwiazujacej krok po kroku
-		
+		//rozpoczecie timera rozwiazujacego
 		solveClock.restart();
 	}
 	
 	private void stepSolve()
 	{
-		unSetMarked();
-		setMarked(gridElements[step_i][step_j]);
-		this.marked.setFieldValue(solvingArray[step_i][step_j]);
-		this.repaint();
-		
-		if ((step_i == 1) & (step_j == 0))
+		//odswiez podglad
+		if ((step_i < 9) & (step_j < 9))
 		{
-			System.out.println();
+			unSetMarked();
+			setMarked(gridElements[step_i][step_j]);
+			this.marked.setFieldValue(solvingArray[step_i][step_j]);
+			this.repaint();
 		}
+		
+		//zinkrementuj liczbe sprawdzana
 		solvingArray[step_i][step_j]++;
 		
 		if (solvingArray[step_i][step_j] == 10) 
 		{
+			//jezeli nie znaleziono wroc do poprzedneij liczby
 			solvingArray[step_i][step_j] = 0;
 			this.marked.setFieldValue(solvingArray[step_i][step_j]);
 			this.repaint();
 			
 			if (stepBackward()) return;
 		} else {
-		
+			//sprawdz czy pasuje liczba i jezeli tak przejdz dalej
 			if (checkRules(step_i, step_j))
 			{
 				if (stepForward()) return;
 			}
 		}
-		//jezeli natrafi na podana liczbe w problemie to przejdz dalej
-		//TODO: ostatecza wersja
-
-		
 	}
 	
 	private boolean isHardState(int i, int j)
 	{
-		return (solvingArray[i][j] == hardState[i][j]) & (solvingArray[i][j] != 0);
+		return (solvingArray[i][j] == solvingHardState[i][j]) & (solvingArray[i][j] != 0);
 	}
 	
 	private boolean stepForward()
 	{
-		unSetMarked();
-		setMarked(gridElements[step_i][step_j]);
-		this.marked.setFieldValue(solvingArray[step_i][step_j]);
-		this.repaint();
+		//odswiez podglad dla pol ktore pomijamy gdy 2 pola z hardState znajduja sie przed i po rozwiazywanlnego pola
+		if ((step_i < 9) & (step_j < 9))
+		{
+			unSetMarked();
+			setMarked(gridElements[step_i][step_j]);
+			this.marked.setFieldValue(solvingArray[step_i][step_j]);
+			this.repaint();
+		}
 		
 		step_j++;
 		
@@ -556,7 +537,8 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 		
 		if (step_i > 8) 
 		{
-			stopSolving("Success");
+			stopSolving(); //success
+			reportSuccess();
 			return true;
 		}
 		
@@ -567,6 +549,15 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 	
 	private boolean stepBackward()
 	{
+		//odswiez podglad dla pol ktore pomijanych...
+			if ((step_i < 9) & (step_j < 9))
+			{
+				unSetMarked();
+				setMarked(gridElements[step_i][step_j]);
+				this.marked.setFieldValue(solvingArray[step_i][step_j]);
+				this.repaint();
+			}
+			
 		step_j--;
 		if (step_j < 0)
 		{
@@ -576,7 +567,8 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 		
 		if (step_i < 0) 
 		{
-			stopSolving("Failed");
+			stopSolving(); //failed
+			reportFailure();
 			return true;
 		}
 		
@@ -585,14 +577,51 @@ public class Board extends JPanel implements MouseListener, MouseMotionListener,
 		return false;
 	}
 	
-	private void stopSolving(String msg)
+	private void stopSolving()
 	{
-		System.out.println(msg);
 		solveClock.stop();
 	}
 
-	public void setTimerDelay(int i) {
-		solveClock.setDelay(i);
+	public void setTimerDelay(int ms) {
+		solveClock.setDelay(ms);
 	}
+	
+
+	public void stopSolveStepByStep() {
+		unSetMarked();
+		stopSolving();
+	}
+	
+	public void lockControl()
+	{
+		isLocked = true;
+	}
+	
+	public void unlockControl()
+	{
+		isLocked = false;
+	}
+	
+	private void reportSuccess()
+	{
+		unSetMarked();
+		parentWindow.setInfoText("Success", Color.GREEN);
+	}
+	
+	private void reportFailure()
+	{
+		unSetMarked();
+		parentWindow.setInfoText("Failure", Color.RED);
+	}
+	
+	//nieuzywane event listnery
+	public void keyReleased(KeyEvent e) {}
+	public void mouseDragged(MouseEvent e) {}
+	public void mouseClicked(MouseEvent e) {}
+	public void mousePressed(MouseEvent e) {}
+	public void mouseEntered(MouseEvent e) {}
+	public void mouseExited(MouseEvent e) {}
+	public void keyTyped(KeyEvent e) {}
+
 }
 
