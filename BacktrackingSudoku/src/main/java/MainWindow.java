@@ -119,6 +119,7 @@ public class MainWindow extends JFrame implements ActionListener, KeyListener, I
         layout.putConstraint(SpringLayout.EAST, infoPanel, -10, SpringLayout.EAST, contentPane);
         layout.putConstraint(SpringLayout.WEST, infoPanel, 10, SpringLayout.WEST, contentPane);
         
+        
 		this.pack();
 		fastForward.setVisible(false);
 		infoLabel.setVisible(false);
